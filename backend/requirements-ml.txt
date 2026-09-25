@@ -1,0 +1,6 @@
+# 호스트(Mac mini M2) venv 에서 MPS 를 쓰는 배치 전용 의존성. API 컨테이너 이미지에는 넣지 않는다.
+#   python3.11 -m venv backend/.venv
+#   backend/.venv/bin/pip install -r backend/requirements.txt -r backend/requirements-ml.txt
+torch>=2.3.0
+transformers>=4.44.0
+prophet>=1.1.5
