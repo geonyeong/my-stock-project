@@ -47,12 +47,14 @@ CREATE TABLE IF NOT EXISTS news_sentiments (
     symbol VARCHAR(20),
     source VARCHAR(50) NOT NULL,
     title TEXT NOT NULL,
-    url TEXT UNIQUE,
+    url TEXT,
     sentiment_label VARCHAR(10) NOT NULL,
     sentiment_score NUMERIC(5, 4) NOT NULL,
     impact_score NUMERIC(5, 4),
     summary TEXT,
     PRIMARY KEY (time, id),
+    -- 하이퍼테이블의 유니크 제약은 파티션 컬럼(time)을 포함해야 한다.
+    UNIQUE (time, url),
     FOREIGN KEY (symbol) REFERENCES stocks (symbol) ON DELETE SET NULL
 );
 
