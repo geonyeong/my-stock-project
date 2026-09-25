@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: stock_timescaledb
     restart: always
     environment:
-      POSTGRES_DB: stockdb
-      POSTGRES_USER: stockuser
-      POSTGRES_PASSWORD: stockpassword
+      POSTGRES_DB: ${POSTGRES_DB:-stockdb}
+      POSTGRES_USER: ${POSTGRES_USER:-stockuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stockpassword}
       TZ: Asia/Seoul
     ports:
       - "5432:5432"
@@ -16,7 +14,7 @@ services:
       - timescaledb_data:/var/lib/postgresql/data
       - ./docker/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stockuser -d stockdb"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,8 +43,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://stockuser:stockpassword@timescaledb:5432/stockdb
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-stockuser}:${POSTGRES_PASSWORD:-stockpassword}@timescaledb:5432/${POSTGRES_DB:-stockdb}
       - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_URL=${OLLAMA_URL_FROM_CONTAINER:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:8b}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       - TZ=Asia/Seoul
     volumes:
       - ./backend:/app

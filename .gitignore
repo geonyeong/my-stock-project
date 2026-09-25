@@ -1,0 +1,32 @@
+# 환경 변수
+.env
+.env.*
+!.env.example
+
+# OS / 에디터
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# 모델 가중치·학습 산출물
+backend/artifacts/
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
