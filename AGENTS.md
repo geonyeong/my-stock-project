@@ -18,7 +18,7 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 | 구분 | 내용 |
 |---|---|
 | 백엔드 | Python 3.11, FastAPI, Uvicorn. 진입점은 `backend/main.py`의 `app` (`uvicorn main:app`) |
-| 프론트 | Node.js 20, Next.js. 개발 서버 `npm run dev`, 포트 3000. 소스는 아직 없음 |
+| 프론트 | Node.js 24, Next.js. 개발 서버 `npm run dev`, 포트 3000. 소스는 아직 없음 |
 | DB | TimescaleDB (PostgreSQL 15) + SQLAlchemy 2.0 asyncio + asyncpg |
 | 캐시 | Redis 7. 클라이언트만 의존성에 있고, 사용 코드와 큐 라이브러리는 없다 |
 | 데이터/모델 | pandas, LightGBM은 설치 대상. Prophet, PyTorch, FinBERT, Ollama, Playwright는 README 계획이며 아직 의존성이 아니다 |
@@ -38,7 +38,7 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 │   ├── requirements.txt
 │   └── main.py                      # 아직 없음. 만들면 이 경로
 ├── frontend/                        # Next.js. node_modules, .next 는 컨테이너 전용 볼륨
-│   └── Dockerfile                   # node:20-alpine, npm ci && npm run dev
+│   └── Dockerfile                   # node:24-alpine, npm ci && npm run dev
 ├── docker/timescaledb/init.sql      # 최초 기동 시에만 실행되는 스키마
 ├── docker-compose.yml
 ├── README.md                        # 제품 방향. 아키텍처/로드맵 본문은 비어 있음
