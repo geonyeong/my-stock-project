@@ -9,25 +9,27 @@ AI 코딩 에이전트가 이 저장소에서 작업할 때 따르는 프로젝�
 - **프로젝트명**: AI 기반 주가 예측 및 뉴스 감성 분석 시스템
 - **목적**: 개인 포트폴리오용 주가/ETF 시세, 뉴스 감성, 단기·중장기 전망을 한 대시보드에서 본다. Mac mini M2 로컬과 CPU 리눅스 서버에서 동작하는 것이 목표다.
 - **핵심 사용자**: 운영자 본인 한 명. 공개 투자자문 서비스가 아니다. 화면에 예측을 보여줄 때는 참고용이며 투자 권유가 아니라는 점을 함께 드러낸다.
-- **현재 단계**: 인프라 스캐폴딩. DB 스키마와 Docker 정의만 있다. FastAPI 앱, Next.js 앱, 수집기, 모델 학습 코드는 없다.
+- **현재 단계**: 12절의 1~5단계 코드가 있다. 1~4단계는 로컬 Compose에서 실행을 확인했다. 영문 FinBERT, Prophet, DLinear는 코드만 있고 `requirements-ml.txt`를 설치하지 않아 실행하지 않았다.
 
 README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 아래 6절과 12절을 기준으로 하고, 새 단계를 시작하기 전에 사용자에게 확인한다.
+
+확정된 업무 규칙: 종목 유니버스는 `backend/collectors/universe.py`의 국내 종목·ETF 7개, 일봉 소스는 yfinance(원시 가격), 뉴스는 Google News RSS, LightGBM 예측 기간은 5거래일, 경로 예측은 5~10거래일(기본 10), Ollama 모델은 `qwen3:8b`.
 
 ## 2. 기술 스택
 
 | 구분 | 내용 |
 |---|---|
 | 백엔드 | Python 3.11, FastAPI, Uvicorn. 진입점은 `backend/main.py`의 `app` (`uvicorn main:app`) |
-| 프론트 | Node.js 24, Next.js. 개발 서버 `npm run dev`, 포트 3000. 소스는 아직 없음 |
+| 프론트 | Node.js 24, Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4. 개발 서버 `npm run dev`, 포트 3000 |
 | DB | TimescaleDB (PostgreSQL 15) + SQLAlchemy 2.0 asyncio + asyncpg |
 | 캐시 | Redis 7. 클라이언트만 의존성에 있고, 사용 코드와 큐 라이브러리는 없다 |
-| 데이터/모델 | pandas, LightGBM은 설치 대상. Prophet, PyTorch, FinBERT, Ollama, Playwright는 README 계획이며 아직 의존성이 아니다 |
-| 수집 (계획) | `httpx` + BeautifulSoup4. Playwright는 동적 페이지가 필요할 때만 |
-| 테스트 | 없음 |
+| 데이터/모델 | API 이미지: pandas, LightGBM, yfinance. 호스트 venv 전용 `backend/requirements-ml.txt`: torch, transformers(FinBERT), prophet. Ollama는 호스트에서 실행 |
+| 수집 | `httpx` + BeautifulSoup4, yfinance. Playwright는 동적 페이지가 필요할 때만 |
+| 테스트 | 자동 테스트 없음. 프론트는 `npx tsc --noEmit`, `npx eslint .` |
 | 실행 | Docker Compose. 타임존 `Asia/Seoul` |
-| 패키지 | 백엔드 `pip` / `backend/requirements.txt`, 프론트 `npm` (lockfile 예정) |
+| 패키지 | 백엔드 `pip` / `backend/requirements.txt`, 프론트 `npm` / `frontend/package-lock.json` |
 
-버전 제약: 백엔드는 Python 3.11 문법. Pydantic v2, SQLAlchemy 2.x 스타일만 사용한다. 프론트는 TypeScript와 Next.js App Router로 새로 만든다.
+버전 제약: 백엔드는 Python 3.11 문법. Pydantic v2, SQLAlchemy 2.x 스타일만 사용한다. Next.js 16은 이전 버전과 API가 다르다(`params`가 Promise 등). 프론트 코드를 쓰기 전에 `frontend/AGENTS.md`의 안내대로 `node_modules/next/dist/docs/`를 확인한다.
 
 ## 3. 폴더 구조
 
@@ -35,10 +37,26 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 .
 ├── backend/                         # FastAPI. 호스트 소스가 컨테이너 /app 에 마운트됨
 │   ├── Dockerfile                   # python:3.11-slim, uvicorn --reload
-│   ├── requirements.txt
-│   └── main.py                      # 아직 없음. 만들면 이 경로
+│   ├── requirements.txt             # API 컨테이너 의존성
+│   ├── requirements-ml.txt          # 호스트 venv(MPS) 배치 전용
+│   ├── main.py                      # 앱 생성, CORS, 예외 핸들러, 라우터 등록
+│   ├── core/                        # 설정(환경변수), 로깅
+│   ├── db/session.py                # async 엔진, 세션
+│   ├── models/                      # ORM (init.sql 과 1:1)
+│   ├── schemas/                     # Pydantic 응답 스키마, ApiResponse
+│   ├── repositories/                # 조회 쿼리
+│   ├── routers/                     # health, stocks, news, predictions
+│   ├── collectors/                  # universe.py, prices/, news/ (CLI: python -m ...run)
+│   ├── sentiment/                   # finbert.py, ollama_client.py, service.py
+│   ├── prediction/                  # 피처, LightGBM, Prophet, DLinear, 결과 기록
+│   ├── scripts/seed_stocks.py       # 유니버스를 stocks 에 등록
+│   └── artifacts/                   # 학습 산출물 (gitignore)
 ├── frontend/                        # Next.js. node_modules, .next 는 컨테이너 전용 볼륨
-│   └── Dockerfile                   # node:24-alpine, npm ci && npm run dev
+│   ├── Dockerfile                   # node:24-alpine, npm ci && npm run dev
+│   ├── app/                         # 페이지 (/, /stocks/[symbol])
+│   ├── components/                  # 화면 컴포넌트 (클라이언트 페칭)
+│   ├── hooks/useApi.ts
+│   └── lib/                         # api 래퍼, 타입, 포맷, 모델 표시 정보
 ├── docker/timescaledb/init.sql      # 최초 기동 시에만 실행되는 스키마
 ├── docker-compose.yml
 ├── README.md                        # 제품 방향. 아키텍처/로드맵 본문은 비어 있음
@@ -53,12 +71,13 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 |---|---|
 | 서비스 구성, 포트, 환경변수 | `docker-compose.yml` |
 | 테이블, 하이퍼테이블, 인덱스 | `docker/timescaledb/init.sql` |
-| API 진입점 | `backend/main.py` (신규) |
-| DB 세션, 모델 | `backend/db/`, `backend/models/` (신규) |
-| 시세 수집 | `backend/collectors/prices/` (신규) |
-| 뉴스 수집·감성 | `backend/collectors/news/`, `backend/sentiment/` (신규) |
-| 예측 | `backend/prediction/` (신규) |
-| 화면 | `frontend/app/` (신규) |
+| API 진입점 | `backend/main.py` |
+| DB 세션, 모델 | `backend/db/`, `backend/models/` |
+| 종목 유니버스 | `backend/collectors/universe.py` |
+| 시세 수집 | `backend/collectors/prices/` |
+| 뉴스 수집·감성 | `backend/collectors/news/`, `backend/sentiment/` |
+| 예측 | `backend/prediction/` |
+| 화면 | `frontend/app/`, `frontend/components/` |
 | 백엔드 의존성 | `backend/requirements.txt` |
 | 제품 방향 | `README.md` |
 
@@ -128,7 +147,7 @@ Next.js(:3000) → FastAPI(:8000) → TimescaleDB(:5432), Redis(:6379)
 | `stocks` | `symbol` PK, `name`, `market`, `sector`, `is_active` |
 | `stock_daily_candles` | 일봉 하이퍼테이블. 청크 1개월. 가격·거래량·등락률 |
 | `stock_minute_candles` | 분봉 하이퍼테이블. 청크 7일 |
-| `news_sentiments` | 뉴스 하이퍼테이블. `sentiment_label`, `sentiment_score`, `impact_score`, `url` 유니크 |
+| `news_sentiments` | 뉴스 하이퍼테이블. `sentiment_label`, `sentiment_score`, `impact_score`. `(time, url)` 유니크(하이퍼테이블 유니크 제약은 `time`을 포함해야 함) |
 | `ai_predictions` | 예측 하이퍼테이블. 모델명, 목표일, 예측 종가, 상·하한, `direction_signal`, `win_probability` |
 
 종목을 저장하지 않은 채 캔들이나 예측을 넣지 않는다. `news_sentiments.symbol`만 NULL을 허용한다(종목 무관 매크로 뉴스).
@@ -224,7 +243,23 @@ type: `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`, `perf`.
 
 로컬 포트: Postgres `5432`, Redis `6379`, API `8000`, 웹 `3000`. 타임존은 `Asia/Seoul`.
 
-Compose로 백엔드를 띄우려면 `backend/main.py`가 있어야 한다. 프론트는 `package.json`과 `npm run dev`가 있어야 한다. 둘 다 아직 없다.
+로컬 실행 순서:
+
+```bash
+docker compose up -d                                              # 4개 서비스
+docker compose exec backend python -m scripts.seed_stocks         # 종목 등록
+docker compose exec backend python -m collectors.prices.run       # 일봉 (이력 없으면 3년, 이후 증분)
+docker compose exec backend python -m collectors.news.run --lang ko   # 국내 뉴스 + Ollama 감성
+docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측
+# 호스트 venv (requirements-ml.txt 설치 후, backend 디렉터리에서)
+python -m collectors.news.run --lang en                           # 영문 뉴스 + FinBERT(MPS)
+python -m prediction.run_forecast --model prophet                 # 추세 + 80% 구간
+python -m prediction.run_forecast --model dlinear                 # 60일 입력 경로 + 80% 구간
+```
+
+macOS Docker 컨테이너에서는 MPS를 쓸 수 없다. GPU가 필요한 배치는 호스트 venv에서 돌린다. 컨테이너에서 호스트 Ollama는 `host.docker.internal:11434`로 호출한다. 수집·학습은 CLI로만 실행하고 API로 트리거를 열지 않는다.
+
+`win_probability`는 모든 모델에서 "목표일 종가가 기준일 종가보다 높을 확률"이다. LightGBM은 0.55 이상 `up`, 0.45 이하 `down`, 그 사이 `flat`. 목표일 계산은 평일 기준이고 한국 공휴일은 반영하지 않는다.
 
 권장 구현 순서 (사용자가 단계를 지정하면 그 단계만):
 
