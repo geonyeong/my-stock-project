@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
+from urllib.parse import quote
 
 
 def _async_database_url(url: str) -> str:
@@ -8,6 +9,18 @@ def _async_database_url(url: str) -> str:
     if url.startswith("postgresql://"):
         return url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url
+
+
+def _database_url() -> str:
+    """DATABASE_URL 이 없으면(호스트 venv) .env 의 POSTGRES_* 값으로 localhost 접속 주소를 만든다."""
+    if url := os.environ.get("DATABASE_URL"):
+        return url
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("DATABASE_URL 또는 POSTGRES_PASSWORD 환경변수가 필요합니다. .env 를 확인하세요.")
+    user = os.environ.get("POSTGRES_USER", "stockuser")
+    db = os.environ.get("POSTGRES_DB", "stockdb")
+    return f"postgresql://{quote(user, safe='')}:{quote(password, safe='')}@localhost:5432/{db}"
 
 
 def _split_csv(value: str) -> list[str]:
@@ -26,9 +39,7 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     return Settings(
-        database_url=_async_database_url(
-            os.environ.get("DATABASE_URL", "postgresql://stockuser:stockpassword@localhost:5432/stockdb")
-        ),
+        database_url=_async_database_url(_database_url()),
         redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://localhost:11434"),
         ollama_model=os.environ.get("OLLAMA_MODEL", "qwen3:8b"),

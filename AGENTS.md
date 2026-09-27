@@ -122,7 +122,8 @@ Next.js(:3000) → FastAPI(:8000) → TimescaleDB(:5432), Redis(:6379)
 - SQL은 바인딩 파라미터 또는 ORM만 사용한다.
 - 뉴스 제목, 요약, 종목명은 화면에 넣을 때 이스케이프한다.
 - 상태를 바꾸는 요청에는 단일 사용자 로컬 앱이라도 무분별한 공개 쓰기를 열지 않는다. 인증을 넣기 전에는 수집·학습 트리거를 인터넷에 열어 두지 않는다.
-- DB 비밀번호, API 키, 모델 토큰을 소스에 하드코딩하지 않는다. `docker-compose.yml`의 `stockpassword`는 로컬 개발 기본값이다. 앱 코드나 예시 응답에 복사하지 않고, 실제 비밀은 `.env`로 뺀다. `.env`는 커밋하지 않는다.
+- DB 비밀번호, API 키, 모델 토큰을 소스에 하드코딩하지 않는다. 기본값도 두지 않는다. DB 비밀번호는 루트 `.env`의 `POSTGRES_PASSWORD`에만 있고, 없으면 compose와 백엔드 설정이 기동을 거부한다. `.env`는 커밋하지 않는다.
+- compose의 모든 포트는 `127.0.0.1`에만 바인딩한다. 외부 접속이 필요해지면 인증을 먼저 넣고 사용자에게 확인한다.
 - 외부 시세·뉴스 사이트를 스크랩할 때 인증 쿠키나 계정 정보를 저장소에 넣지 않는다.
 
 ## 6. 아키텍처 원칙
@@ -246,12 +247,13 @@ type: `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`, `perf`.
 로컬 실행 순서:
 
 ```bash
+cp .env.example .env                                              # 최초 1회, POSTGRES_PASSWORD 변경
 docker compose up -d                                              # 4개 서비스
 docker compose exec backend python -m scripts.seed_stocks         # 종목 등록
 docker compose exec backend python -m collectors.prices.run       # 일봉 (이력 없으면 3년, 이후 증분)
 docker compose exec backend python -m collectors.news.run --lang ko   # 국내 뉴스 + Ollama 감성
 docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측
-# 호스트 venv (requirements-ml.txt 설치 후, backend 디렉터리에서)
+# 호스트 venv (requirements-ml.txt 설치 후, backend 디렉터리에서 set -a; source ../.env; set +a)
 python -m collectors.news.run --lang en                           # 영문 뉴스 + FinBERT(MPS)
 python -m prediction.run_forecast --model prophet                 # 추세 + 80% 구간
 python -m prediction.run_forecast --model dlinear                 # 60일 입력 경로 + 80% 구간
