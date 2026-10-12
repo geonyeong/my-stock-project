@@ -34,7 +34,8 @@ def _to_price(value: float) -> Decimal:
     return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _download(ticker: str, start: date, end: date) -> pd.DataFrame:
+def download_history(ticker: str, start: date, end: date) -> pd.DataFrame:
+    """yfinance 일별 시계열을 [start, end] 구간으로 받는다. 타임아웃과 재시도 상한을 둔다."""
     last_error: Exception | None = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -83,5 +84,5 @@ def _normalize(frame: pd.DataFrame, start: date) -> list[DailyBar]:
 
 def fetch_daily_bars(ticker: str, start: date, end: date) -> list[DailyBar]:
     """yfinance 로 [start, end] 구간 일봉을 가져온다. 수정주가가 아닌 원시 가격이다."""
-    frame = _download(ticker, start - timedelta(days=LOOKBACK_BUFFER_DAYS), end)
+    frame = download_history(ticker, start - timedelta(days=LOOKBACK_BUFFER_DAYS), end)
     return _normalize(frame, start)
