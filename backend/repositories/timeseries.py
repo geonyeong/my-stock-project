@@ -4,7 +4,7 @@ from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import Date
 
-from models import NewsSentiment, StockDailyCandle
+from models import MacroDailyRate, NewsSentiment, StockDailyCandle
 
 
 async def load_daily_candles(session: AsyncSession, symbols: list[str]) -> list[dict]:
@@ -36,5 +36,14 @@ async def load_daily_sentiment(session: AsyncSession, symbols: list[str]) -> lis
         )
         .where(NewsSentiment.symbol.in_(symbols))
         .group_by(NewsSentiment.symbol, day)
+    )
+    return [dict(row._mapping) for row in await session.execute(stmt)]
+
+
+async def load_daily_rates(session: AsyncSession, series_codes: list[str]) -> list[dict]:
+    stmt = (
+        select(MacroDailyRate.series_code, MacroDailyRate.time, MacroDailyRate.value)
+        .where(MacroDailyRate.series_code.in_(series_codes))
+        .order_by(MacroDailyRate.time)
     )
     return [dict(row._mapping) for row in await session.execute(stmt)]
