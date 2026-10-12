@@ -77,3 +77,15 @@ CREATE TABLE IF NOT EXISTS ai_predictions (
 
 SELECT create_hypertable('ai_predictions', 'time', chunk_time_interval => INTERVAL '1 month', if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_predictions_symbol_target ON ai_predictions (symbol, target_date DESC);
+
+-- 종목과 무관한 일별 거시 지표(국채 금리 등). time 은 해당 시장 현지 날짜 00:00.
+CREATE TABLE IF NOT EXISTS macro_daily_rates (
+    time TIMESTAMPTZ NOT NULL,
+    series_code VARCHAR(20) NOT NULL,
+    value NUMERIC(8, 4) NOT NULL,
+    source VARCHAR(20) NOT NULL,
+    PRIMARY KEY (time, series_code)
+);
+
+SELECT create_hypertable('macro_daily_rates', 'time', chunk_time_interval => INTERVAL '1 year', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS idx_macro_series_time ON macro_daily_rates (series_code, time DESC);
