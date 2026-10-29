@@ -259,7 +259,8 @@ docker compose exec backend python -m collectors.prices.run       # 일봉 (이�
 docker compose exec backend python -m collectors.news.run --lang ko   # 국내 뉴스 + Ollama 감성
 docker compose exec backend python -m collectors.rates.run        # 미국 국채 금리 (기존 볼륨은 migrations/001 먼저 적용)
 docker compose exec backend python -m collectors.earnings.run     # 실적 일정 (ETF 제외, 기존 볼륨은 migrations/002 먼저 적용)
-docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측 (금리·실적 일정 포함, --no-earnings --evaluate-only 로 비교)
+docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측 (금리·실적 일정 포함, 감성 제외)
+# 월~금 18:00 자동 실행은 scripts/daily_close.sh (감성 없이 학습, 뉴스 실패는 넘어감)
 # 호스트 venv (requirements-ml.txt 설치 후, backend 디렉터리에서 set -a; source ../.env; set +a)
 python -m collectors.news.run --lang en                           # 영문 뉴스 + FinBERT(MPS)
 python -m prediction.run_forecast --model prophet                 # 추세 + 80% 구간
@@ -268,7 +269,7 @@ python -m prediction.run_forecast --model dlinear                 # 60일 입력
 
 macOS Docker 컨테이너에서는 MPS를 쓸 수 없다. GPU가 필요한 배치는 호스트 venv에서 돌린다. 컨테이너에서 호스트 Ollama는 `host.docker.internal:11434`로 호출한다. 수집·학습은 CLI로만 실행하고 API로 트리거를 열지 않는다.
 
-`win_probability`는 모든 모델에서 "목표일 종가가 기준일 종가보다 높을 확률"이다. LightGBM은 0.55 이상 `up`, 0.45 이하 `down`, 그 사이 `flat`. 목표일 계산은 평일 기준이고 한국 공휴일은 반영하지 않는다.
+`win_probability`는 모든 모델에서 "목표일 종가가 기준일 종가보다 높을 확률"이다. LightGBM은 0.55 이상 `up`, 0.45 이하 `down`, 그 사이 `flat`. 목표일은 `backend/prediction/holidays.py`의 한국거래소 휴장일을 뺀 거래일이다. 목록은 2027-10-29까지다. 뉴스 감성은 기본 학습에 넣지 않고, 감성 이력이 일봉 시작과 60일 이내로 붙기 전에는 `--with-sentiment` 가 거부된다. 장 마감 수집은 `scripts/daily_close.sh` (월~금 18:00 launchd)이며 API 로 열지 않는다.
 
 권장 구현 순서 (사용자가 단계를 지정하면 그 단계만):
 
