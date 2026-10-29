@@ -91,6 +91,22 @@ def predict_latest(booster: lgb.Booster, data: pd.DataFrame, features: list[str]
     return latest
 
 
+def load_evaluation(model_name: str) -> dict | None:
+    """저장한 walk-forward 평균. 산출물이 없으면 None."""
+    path = ARTIFACT_DIR / f"{model_name}.json"
+    if not path.is_file():
+        return None
+    folds = json.loads(path.read_text()).get("walk_forward") or []
+    if not folds:
+        return None
+    return {
+        "accuracy": sum(fold["accuracy"] for fold in folds) / len(folds),
+        "baseline_accuracy": sum(fold["baseline_accuracy"] for fold in folds) / len(folds),
+        "test_start": folds[0]["test_start"],
+        "test_end": folds[-1]["test_end"],
+    }
+
+
 def save(booster: lgb.Booster, model_name: str, features: list[str], metrics: list[FoldMetric]) -> Path:
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     model_path = ARTIFACT_DIR / f"{model_name}.txt"

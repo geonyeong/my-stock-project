@@ -29,6 +29,12 @@ function ModelCard({ modelName, rows }: { modelName: string; rows: Prediction[] 
       {last.win_probability !== null && (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">상승 확률 {formatPercent(last.win_probability)}</p>
       )}
+      {last.evaluation && (
+        <p className="mt-2 text-xs text-zinc-500">
+          최근 검증 정확도 {formatPercent(last.evaluation.accuracy)}, 기준선{" "}
+          {formatPercent(last.evaluation.baseline_accuracy)} ({last.evaluation.test_start}~{last.evaluation.test_end})
+        </p>
+      )}
       {hasPath && (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           추정 {formatPrice(last.predicted_close)}

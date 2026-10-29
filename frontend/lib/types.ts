@@ -28,6 +28,13 @@ export interface Candle {
 
 export type Direction = "up" | "down" | "flat";
 
+export interface WalkForward {
+  accuracy: number;
+  baseline_accuracy: number;
+  test_start: string;
+  test_end: string;
+}
+
 export interface Prediction {
   time: string;
   target_date: string;
@@ -37,6 +44,7 @@ export interface Prediction {
   predicted_close: DecimalString | null;
   upper_bound: DecimalString | null;
   lower_bound: DecimalString | null;
+  evaluation: WalkForward | null;
 }
 
 export type SentimentLabel = "positive" | "negative" | "neutral";
