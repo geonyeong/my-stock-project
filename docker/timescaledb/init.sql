@@ -89,3 +89,18 @@ CREATE TABLE IF NOT EXISTS macro_daily_rates (
 
 SELECT create_hypertable('macro_daily_rates', 'time', chunk_time_interval => INTERVAL '1 year', if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_macro_series_time ON macro_daily_rates (series_code, time DESC);
+
+-- 종목별 실적 발표 일정. time 은 발표 시각의 한국 날짜 00:00. EPS·서프라이즈는 참고용이고 비어 있을 수 있다.
+CREATE TABLE IF NOT EXISTS earnings_events (
+    time TIMESTAMPTZ NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    eps_estimate NUMERIC(16, 4),
+    eps_reported NUMERIC(16, 4),
+    surprise_pct NUMERIC(12, 4),
+    source VARCHAR(20) NOT NULL,
+    PRIMARY KEY (time, symbol),
+    FOREIGN KEY (symbol) REFERENCES stocks (symbol) ON DELETE CASCADE
+);
+
+SELECT create_hypertable('earnings_events', 'time', chunk_time_interval => INTERVAL '1 year', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS idx_earnings_symbol_time ON earnings_events (symbol, time DESC);
