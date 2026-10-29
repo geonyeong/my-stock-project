@@ -1,6 +1,7 @@
 "use client";
 
 import CandleTable from "@/components/CandleTable";
+import EarningsPanel from "@/components/EarningsPanel";
 import NewsList from "@/components/NewsList";
 import PredictionPanel from "@/components/PredictionPanel";
 import PriceChart from "@/components/PriceChart";
@@ -41,6 +42,11 @@ export default function StockDetail({ symbol }: { symbol: string }) {
           </div>
         )}
       </header>
+
+      <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <h2 className="mb-3 text-sm font-semibold text-zinc-500">실적 발표</h2>
+        <EarningsPanel symbol={symbol} isEtf={stock.data.sector === "ETF"} baseTime={latest?.time} />
+      </section>
 
       <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
         <h2 className="mb-3 text-sm font-semibold text-zinc-500">일봉 종가와 모델 전망</h2>

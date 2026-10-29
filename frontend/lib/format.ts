@@ -26,6 +26,12 @@ export function formatRate(value: string | null): string {
   return `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
 
+export function formatSurprise(value: string | null): string {
+  if (value === null) return "-";
+  const n = Number(value);
+  return `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
+}
+
 export function formatPercent(value: string | number | null): string {
   if (value === null) return "-";
   return `${(Number(value) * 100).toFixed(1)}%`;

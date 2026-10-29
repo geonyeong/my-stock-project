@@ -41,6 +41,14 @@ export interface Prediction {
 
 export type SentimentLabel = "positive" | "negative" | "neutral";
 
+export interface EarningsEvent {
+  time: string;
+  symbol: string;
+  eps_estimate: DecimalString | null;
+  eps_reported: DecimalString | null;
+  surprise_pct: DecimalString | null;
+}
+
 export interface NewsItem {
   time: string;
   symbol: string | null;

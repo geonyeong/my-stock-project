@@ -1,4 +1,4 @@
-import type { ApiResponse, Candle, NewsItem, Prediction, Stock } from "./types";
+import type { ApiResponse, Candle, EarningsEvent, NewsItem, Prediction, Stock } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -30,4 +30,7 @@ export const api = {
     request<NewsItem[]>(`/news?symbol=${encodeURIComponent(symbol)}&limit=${limit}`, signal),
   predictions: (symbol: string, signal?: AbortSignal) =>
     request<Prediction[]>(`/predictions/${encodeURIComponent(symbol)}`, signal),
+  earnings: (symbol: string, signal?: AbortSignal) =>
+    request<EarningsEvent[]>(`/stocks/${encodeURIComponent(symbol)}/earnings`, signal),
+  upcomingEarnings: (signal?: AbortSignal) => request<EarningsEvent[]>("/earnings/upcoming", signal),
 };
