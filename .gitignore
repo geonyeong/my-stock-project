@@ -18,6 +18,9 @@ venv/
 
 # 모델 가중치·학습 산출물
 backend/artifacts/
+
+# 장 마감 수집 로그
+logs/
 *.pt
 *.pth
 *.safetensors

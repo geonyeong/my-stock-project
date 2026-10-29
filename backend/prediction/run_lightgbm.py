@@ -32,6 +32,8 @@ from prediction.writer import PredictionRow, direction_from_prob, to_probability
 logger = logging.getLogger(__name__)
 
 HORIZON_DAYS = 5
+# 감성 이력이 일봉 시작보다 이 일수보다 짧으면 대부분 0이라 최근 구간 표시가 된다.
+SENTIMENT_GAP_DAYS = 60
 
 
 def _parse_args() -> argparse.Namespace:
@@ -45,6 +47,19 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--no-earnings", action="store_true", help="실적 일정 피처 제외 (비교용)")
     parser.add_argument("--evaluate-only", action="store_true", help="walk-forward 검증만 하고 모델 저장·예측 기록은 하지 않음")
     return parser.parse_args()
+
+
+def _require_sentiment_history(candles, sentiment) -> None:
+    if sentiment is None or sentiment.empty:
+        raise SystemExit("뉴스 감성이 없습니다. collectors.news.run 으로 이력을 쌓은 뒤 다시 실행하세요.")
+    first_candle = min(candles["day"])
+    first_news = min(sentiment["day"])
+    gap_days = (first_news - first_candle).days
+    if gap_days > SENTIMENT_GAP_DAYS:
+        raise SystemExit(
+            f"뉴스 감성 시작({first_news})이 일봉 시작({first_candle})보다 {gap_days}일 늦습니다. "
+            "학습 구간을 덮을 때까지 --with-sentiment 를 쓰지 마세요."
+        )
 
 
 def _log_metrics(metrics: list[lightgbm_model.FoldMetric]) -> None:
@@ -94,6 +109,8 @@ async def run(with_sentiment: bool, with_rates: bool, with_earnings: bool, evalu
     symbols = [item.symbol for item in UNIVERSE]
     candles = await load_candles(symbols)
     sentiment = await load_sentiment(symbols) if with_sentiment else None
+    if with_sentiment:
+        _require_sentiment_history(candles, sentiment)
     rates = await load_rates() if with_rates else None
     earnings = await load_earnings(symbols) if with_earnings else None
     if rates is not None and rates.empty:
