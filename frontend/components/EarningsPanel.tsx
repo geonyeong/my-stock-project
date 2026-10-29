@@ -54,6 +54,7 @@ function PastEvents({ events }: { events: EarningsEvent[] }) {
 
 function Schedule({ symbol, baseTime }: { symbol: string; baseTime?: string }) {
   const { data, error, loading } = useApi((signal) => api.earnings(symbol, signal), `earnings:${symbol}`);
+  const holidays = useApi((signal) => api.holidays(signal), "calendar:holidays");
   if (loading || error || !data?.length) {
     return (
       <StatusMessage
@@ -71,7 +72,12 @@ function Schedule({ symbol, baseTime }: { symbol: string; baseTime?: string }) {
     .sort((a, b) => a.time.localeCompare(b.time));
   const past = data.filter((event) => seoulDay(event.time) < today).slice(0, 4);
   const next = upcoming[0];
-  const inHorizon = next !== undefined && baseTime !== undefined && earningsInHorizon(baseTime, next.time);
+  const closed = new Set(holidays.data ?? []);
+  const inHorizon =
+    next !== undefined &&
+    baseTime !== undefined &&
+    holidays.data !== null &&
+    earningsInHorizon(baseTime, next.time, closed);
 
   return (
     <div className="flex flex-col gap-4">

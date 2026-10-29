@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from core.config import get_settings
 from core.logging import setup_logging
 from db.session import engine
-from routers import earnings, health, news, predictions, stocks
+from routers import calendar, earnings, health, news, predictions, stocks
 from schemas.common import fail_body
 
 setup_logging()
@@ -51,6 +51,7 @@ async def unhandled_exception_handler(request: Request, _: Exception) -> JSONRes
 
 
 app.include_router(health.router)
+app.include_router(calendar.router)
 app.include_router(stocks.router)
 app.include_router(earnings.router)
 app.include_router(news.router)

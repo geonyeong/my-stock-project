@@ -33,4 +33,5 @@ export const api = {
   earnings: (symbol: string, signal?: AbortSignal) =>
     request<EarningsEvent[]>(`/stocks/${encodeURIComponent(symbol)}/earnings`, signal),
   upcomingEarnings: (signal?: AbortSignal) => request<EarningsEvent[]>("/earnings/upcoming", signal),
+  holidays: (signal?: AbortSignal) => request<string[]>("/calendar/holidays", signal),
 };
