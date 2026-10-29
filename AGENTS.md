@@ -13,7 +13,7 @@ AI 코딩 에이전트가 이 저장소에서 작업할 때 따르는 프로젝�
 
 README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 아래 6절과 12절을 기준으로 하고, 새 단계를 시작하기 전에 사용자에게 확인한다.
 
-확정된 업무 규칙: 종목 유니버스는 `backend/collectors/universe.py`의 국내 종목·ETF 7개, 일봉 소스는 yfinance(원시 가격), 뉴스는 Google News RSS, LightGBM 예측 기간은 5거래일, 경로 예측은 5~10거래일(기본 10), Ollama 모델은 `qwen3:8b`. 금리는 미국 국채 3M/5Y/10Y(yfinance `^IRX`/`^FVX`/`^TNX`)를 LightGBM 피처로만 쓰고, 한국 거래일 D에는 D보다 앞선 미국 날짜 값만 붙인다.
+확정된 업무 규칙: 종목 유니버스는 `backend/collectors/universe.py`의 국내 종목·ETF 7개, 일봉 소스는 yfinance(원시 가격), 뉴스는 Google News RSS, LightGBM 예측 기간은 5거래일, 경로 예측은 5~10거래일(기본 10), Ollama 모델은 `qwen3:8b`. 금리는 미국 국채 3M/5Y/10Y(yfinance `^IRX`/`^FVX`/`^TNX`)를 LightGBM 피처로만 쓰고, 한국 거래일 D에는 D보다 앞선 미국 날짜 값만 붙인다. 실적 일정은 yfinance를 ETF를 제외한 유니버스 종목에 쓰고, LightGBM에는 기준일 다음 거래일부터 5거래일 목표일까지의 발표 여부만 넣는다. EPS·서프라이즈 수치는 모델에 넣지 않는다.
 
 ## 2. 기술 스택
 
@@ -46,7 +46,7 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 │   ├── schemas/                     # Pydantic 응답 스키마, ApiResponse
 │   ├── repositories/                # 조회 쿼리
 │   ├── routers/                     # health, stocks, news, predictions
-│   ├── collectors/                  # universe.py, prices/, news/ (CLI: python -m ...run)
+│   ├── collectors/                  # universe.py, prices/, news/, rates/, earnings/ (CLI: python -m ...run)
 │   ├── sentiment/                   # finbert.py, ollama_client.py, service.py
 │   ├── prediction/                  # 피처, LightGBM, Prophet, DLinear, 결과 기록
 │   ├── scripts/seed_stocks.py       # 유니버스를 stocks 에 등록
@@ -76,6 +76,7 @@ README의 아키텍처 절과 로드맵 절은 비어 있다. 구현 범위는 �
 | 종목 유니버스 | `backend/collectors/universe.py` |
 | 시세 수집 | `backend/collectors/prices/` |
 | 국채 금리 수집 | `backend/collectors/rates/` |
+| 실적 일정 수집 | `backend/collectors/earnings/` |
 | 기존 볼륨 마이그레이션 | `docker/timescaledb/migrations/` |
 | 뉴스 수집·감성 | `backend/collectors/news/`, `backend/sentiment/` |
 | 예측 | `backend/prediction/` |
@@ -153,6 +154,7 @@ Next.js(:3000) → FastAPI(:8000) → TimescaleDB(:5432), Redis(:6379)
 | `news_sentiments` | 뉴스 하이퍼테이블. `sentiment_label`, `sentiment_score`, `impact_score`. `(time, url)` 유니크(하이퍼테이블 유니크 제약은 `time`을 포함해야 함) |
 | `ai_predictions` | 예측 하이퍼테이블. 모델명, 목표일, 예측 종가, 상·하한, `direction_signal`, `win_probability` |
 | `macro_daily_rates` | 거시 금리 하이퍼테이블. 청크 1년. `(time, series_code)` PK, `value NUMERIC(8,4)`(%), `source`. `time`은 시리즈 현지 날짜 00:00 |
+| `earnings_events` | 실적 일정 하이퍼테이블. 청크 1년. `(time, symbol)` PK. `time`은 한국 날짜 00:00. EPS 예상·발표·서프라이즈는 없을 수 있다 |
 
 종목을 저장하지 않은 채 캔들이나 예측을 넣지 않는다. `news_sentiments.symbol`만 NULL을 허용한다(종목 무관 매크로 뉴스).
 
@@ -256,7 +258,8 @@ docker compose exec backend python -m scripts.seed_stocks         # 종목 등�
 docker compose exec backend python -m collectors.prices.run       # 일봉 (이력 없으면 3년, 이후 증분)
 docker compose exec backend python -m collectors.news.run --lang ko   # 국내 뉴스 + Ollama 감성
 docker compose exec backend python -m collectors.rates.run        # 미국 국채 금리 (기존 볼륨은 migrations/001 먼저 적용)
-docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측 (금리 포함, --no-rates --evaluate-only 로 비교)
+docker compose exec backend python -m collectors.earnings.run     # 실적 일정 (ETF 제외, 기존 볼륨은 migrations/002 먼저 적용)
+docker compose exec backend python -m prediction.run_lightgbm     # 5거래일 방향 예측 (금리·실적 일정 포함, --no-earnings --evaluate-only 로 비교)
 # 호스트 venv (requirements-ml.txt 설치 후, backend 디렉터리에서 set -a; source ../.env; set +a)
 python -m collectors.news.run --lang en                           # 영문 뉴스 + FinBERT(MPS)
 python -m prediction.run_forecast --model prophet                 # 추세 + 80% 구간
